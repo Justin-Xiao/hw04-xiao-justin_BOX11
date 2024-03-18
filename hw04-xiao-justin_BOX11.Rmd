@@ -1,0 +1,215 @@
+---
+title: "Homework 04"
+author: "Xiao, Justin (email: BOX11@pitt.edu)"
+date: today
+
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    theme: flatly
+---
+<style>
+    table {
+      border-collapse: collapse;
+    }
+      table, th, td, thead, tbody{
+        border: 1px solid black;
+    }
+    thead {
+        border-bottom: solid black;
+    }
+</style>
+
+
+# Overview
+
+> In this assignment, You will use two datasets: the DJI(Dow Jones Index) data of stock price, and the political book co-purchase dataset for this assignment.
+
+**Problem 1**. analyze the data of stock price: DJI.csv (included in the repository). The dataset contains historical price of stocks. Each column of the dataset is a stock and their code name is on the first row. The objective of the analysis is to group stocks together if they have similar trends in price.     
+
+a. Use PCA to reduce the dimension of stock-price information. Generate a scree plot and determine the number of principle components based on this plot. Plot the loadings for first principal component.   
+**hint:** Standardize the data before doing PCA. Specifically, make the stocks to be the unit (rows) of analysis, and standardize it for columns to be in the same scale, using `t` and `scale` in R. You will loose 2 points if you directly perform PCA without standardize the data.      
+
+b. Generate a scatter plot to that shows the projected stock prices (labeled with stock codes) on the first two principal components as x- and y-axes.    
+
+c. Generate an MDS map to plot stocks on a two-dimensional space.    
+
+d. Use k-means and hierarchical clustering to group stocks. Specifically, you will generate 8 MDS maps for the stocks and color the stocks based on different clustering methods: k-means with different number of clusters(k=4, k=8), h-clustering with single-link using different number of clusters(k=4, k=8), h-clustering with complete-link using different number of clusters(k=4, k=8), h-clustering with average-link using different number of clusters(k=4, k=8). For each hierarchical clustering method, generate a dendrogram.     
+
+
+**Problem 2**. analyze "Books about US Politics" data. The objective is to identify and visualize the clustering patterns of political books' co-purchase activities. The original data was compiled from an online bookseller on Amazon.com, by V. Krebs [link](http://www.orgnet.com/divided.html).You will use two files of processed data for this task:     
+
+**bookinfo.csv** (included in the repository): contains the name and class for each book. Books have been given values 1, 2, or 3 to indicate whether they are "liberal", "neutral", or "conservative" repectively. (Note: in this assignment, we only include "liberal" and "conservative" books here.)     
+**bookcopurchase.csv** (included in the repository): shows whether two books were "co-purchased" by the same buyers (0: not purchased together; 1: purchased together)     
+
+a. Create a book-by-book distance matrix. Generate an MDS plot to project the books with their names on a two dimensional space. Use shapes or color to differentiate the books' Class (liberal or conservative).    
+
+b. Use K-means and hierarchical clustering to group books with their names, and color the books on the MDS plots based on the clustering results (you will need to use k-means,h-clustering with single-link, h-clustering with complete-link, h-clustering with average-link and k=2)    
+
+c. Compare the clustering results with the Class labels and identify books in a certain class that are assigned to a seemly wrong cluster. Specifically, based on k-means results, which liberal books are clustered together with conservative books, and vice versa? And based on the three variance (single-link, complete-link, average-link), which liberal books are clustered together with conservative books, and vice versa? (Note: you can just identify 2-3 books, no need to list all of them)     
+
+d. Compute the purity and entropy for these clustering results with respect to the books' class labels. You will need to generate a 2×4 table as follows:      
+
+Measure/Method | k-means      |  hclust-single    | hclust-complete  | hclust-average  |
+-------------|--------------| ------------------|------------------|------------------|
+purity      |              |                   |                  |                   |
+entropy     |              |                   |                  |                   |    
+
+e. Based on your observation on both measures and mis-classified members, choose two clustering methods that generate the most meaningful results and explain why.
+
+
+```{r document_setup, echo=F, message=F, warning=F}
+# This chunk can include things you need for the rest of the document
+library('ggplot2') ## most of the time you will need ggplot
+theme_set(theme_bw()) # change the default ggplot theme to black-and-white
+
+knitr::opts_chunk$set(
+  echo=T, ## show your R code chunk
+  message = F, ## hide the message
+  warning = F, ## hide the warning
+  autodep = T ## make sure your separate code chunks can find the dependencies (from other code chunk)
+)
+```
+
+# Problem 1: 
+
+```{r}
+## YOUR CODE HERE
+set.seed(1)
+DJI <- read.csv("DJI.csv")
+RDJI <- t(DJI)
+
+## A
+pcaDJI = prcomp(DJI, scale = T)
+DJIpc = predict(pcaDJI)
+plot(pcaDJI, main="Principle Components")
+
+## B
+biplot(pcaDJI)
+
+## C
+DJIdist = dist(RDJI)
+DJImds <- cmdscale(DJIdist)
+plot(DJImds, type = 'n')
+text(DJImds, labels=row.names(RDJI))
+
+## D
+## kmeans
+DJIkmeans4 = kmeans(RDJI, centers=4)
+DJIkmeans8 = kmeans(RDJI, centers=8)
+plot(DJImds, main="k-means k=4", type = 'n')
+text(DJImds, labels=row.names(RDJI), col = DJIkmeans4$cluster+1)
+
+plot(DJImds, main="k-means k=8", type = 'n')
+text(DJImds, labels=row.names(RDJI), col = rainbow(7)[DJIkmeans8$cluster])
+
+HCsgle = hclust(DJIdist, method = 'single')
+HCcomp = hclust(DJIdist, method = 'complete')
+HCaveg = hclust(DJIdist, method = 'average')
+HCsgle4 = cutree(HCsgle, k = 4)
+plot(DJImds, main="HC single-link k=4", type = 'n')
+text(DJImds, labels=row.names(RDJI), col = HCsgle4+1)
+
+HCsgle8 = cutree(HCsgle, k = 8)
+plot(DJImds, main="HC single-link k=8", type = 'n')
+text(DJImds, labels=row.names(RDJI), col = HCsgle8+1)
+
+HCcomp4 = cutree(HCcomp, k = 4)
+plot(DJImds, main="HC complete-link k=4", type = 'n')
+text(DJImds, labels=row.names(RDJI), col = HCcomp4+1)
+
+HCcomp8 = cutree(HCcomp, k = 8)
+plot(DJImds, main="HC complete-link k=8", type = 'n')
+text(DJImds, labels=row.names(RDJI), col = HCcomp8+1)
+
+HCaveg4 = cutree(HCaveg, k = 4)
+plot(DJImds, main="HC average-link k=4", type = 'n')
+text(DJImds, labels=row.names(RDJI), col = HCaveg4+1)
+
+HCaveg8 = cutree(HCaveg, k = 8)
+plot(DJImds, main="HC average-link k=8", type = 'n')
+text(DJImds, labels=row.names(RDJI), col = HCaveg8+1)
+```
+
+YOUR ANSWER for Problem 1.
+
+# Problem 2. 
+
+```{r}
+## YOUR CODE HERE
+bookCP <- read.csv("bookcopurchase.csv")
+bookinfo <- read.csv("bookinfo.csv")
+bookCPmtx <- bookCP[,-1]
+bookinfoalt <- bookinfo
+
+trans <- c(1,3,2, NA)
+names(trans) <- c(1,2,3,NA)
+bookinfoalt$Class <- trans[bookinfoalt$Class]
+
+## A
+bookdist = dist(bookCPmtx)
+bookmds <- cmdscale(bookdist)
+
+plot(bookmds, main="book-by-book distance", type = 'n')
+text(bookmds, labels=bookinfo$name, col = bookinfo$Class)
+
+## B
+bookkmeans2 = kmeans(bookdist, centers=2)
+
+plot(bookmds, main="k-means k=2", type = 'n')
+text(bookmds, labels=bookinfo$name, col = bookkmeans2$cluster)
+
+HCsgle = hclust(bookdist, method = 'single')
+HCcomp = hclust(bookdist, method = 'complete')
+HCaveg = hclust(bookdist, method = 'average')
+
+HCsgle2 = cutree(HCsgle, k = 2)
+HCcomp2 = cutree(HCcomp, k = 2)
+HCaveg2 = cutree(HCaveg, k = 2)
+
+plot(bookmds, main="HC single-link k=2", type = 'n')
+text(bookmds, labels=bookinfo$name, col = HCsgle2)
+plot(bookmds, main="HC complete-link k=2", type = 'n')
+text(bookmds, labels=bookinfo$name, col = HCcomp2)
+plot(bookmds, main="HC average-link k=2", type = 'n')
+text(bookmds, labels=bookinfo$name, col = HCaveg2)
+
+## D
+cluster.purity <- function(clusters, classes) {
+  sum(apply(table(classes, clusters), 2, max)) / length(clusters)
+}
+
+cluster.entropy <- function(clusters,classes) {
+  en <- function(x) {
+    s = sum(x)
+    sum(sapply(x/s, function(p) {if (p) -p*log2(p) else 0} ) )
+  }
+  M = table(classes, clusters)
+  m = apply(M, 2, en)
+  c = colSums(M) / sum(M)
+  sum(m*c)
+}
+
+statTable = matrix(
+  c(cluster.purity(bookkmeans2$cluster,bookinfoalt$Class), cluster.purity(HCsgle2,bookinfoalt$Class), cluster.purity(HCcomp2,bookinfoalt$Class), cluster.purity(HCaveg2,bookinfoalt$Class),
+    cluster.entropy(bookkmeans2$cluster,bookinfoalt$Class),
+    cluster.entropy(HCsgle2,bookinfoalt$Class),
+    cluster.entropy(HCcomp2,bookinfoalt$Class),
+    cluster.entropy(HCaveg2,bookinfoalt$Class)),
+  nrow = 2,
+  ncol = 4,
+  byrow = T
+)
+rownames(statTable) = c("purity", "entropy")
+colnames(statTable) = c("k-means", "hclust-single", "hclust-complete", "hclust-average")
+TableF <- as.table(statTable)
+TableF
+
+```
+
+YOUR ANSWER for Problem 2.
+E.Asw:
+In this situation, the hierarchical clustering with complete-link is most meaningful, since it has the largest 
+purity and the lowest entropy.
